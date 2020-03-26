@@ -1,0 +1,74 @@
+# tell docker what version of the docker-compose.yml were using
+version: '3'
+
+networks:
+  web-network:
+
+services:
+    docker-php-cli:
+        build: 
+            context: ./php-cli
+    
+        ports:
+            - "2222:22"
+    
+        tty: true
+    
+        volumes:
+            - ./app:/var/www/html
+    
+        networks:
+            - web-network
+
+    docker-nginx:
+        build:
+            context: ./nginx
+    
+        ports:
+            - "80:80" # hier gegebenenfalls gegen "8080:80" tauschen, falls Port 80 bereits belegt ist
+            
+        tty: true
+        
+        volumes:
+            - ./app:/var/www/html
+            - ./nginx/conf.d:/etc/nginx/conf.d
+            
+        networks:
+            - web-network
+
+    docker-php-fpm:
+        build: 
+            context: ./php-fpm
+            
+        tty: true
+        
+        volumes:
+            - ./app:/var/www/html
+    
+        networks:
+            - web-network
+
+    mysqldb:
+        image: mysql:5.7
+        restart: always
+        command: --innodb-use-native-aio=0 --disable-partition-engine-check
+        env_file:
+            - ".env"
+        environment:
+            - MYSQL_DATABASE=${MYSQL_DATABASE}
+            - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+            - MYSQL_USER=${MYSQL_USER}
+            - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+        expose:
+            - "3306"
+        ports:
+            - "3306:3306" # hier gegebenenfalls gegen "33060:3306" tauschen, falls Port 3306 bereits belegt ist
+        volumes:
+            - "database:/var/lib/mysql"
+            - "./conf:/etc/mysql/conf.d"
+        networks:
+            - web-network
+    
+volumes:
+  database:
+    driver: local
